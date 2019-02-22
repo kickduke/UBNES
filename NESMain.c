@@ -14,38 +14,37 @@
 #include "SaveLoad.h"
 
 SDL_Surface *screen = NULL; 
+SDL_Surface *backpic = NULL;
+SDL_Surface *cartpic = NULL;
 
 int main(int argc, char* argv[])
 {         
-    int  pixelx=0;
-    int  pixely=0;
-    int done=0;
-    int  cart=0;
-    int  cartx=0;
-    int  carty=0;
-	int romno=4;
-	float speed=1;
-	DWORD *rgb=rgbQuard;
-    char *romname="/home/kqs/Project/UBNES/ROM/test.nes";
-    long FrameStartTime;
-    long SleepTime;
+    int pixelx = 0;        //临时变量用于绘制屏幕
+    int pixely = 0;
+    int done = 0;          //主循环控制
+    int cart = 0;          //0:主界面   1：游戏选择界面
+	int romno = -1;
+	float speed = 1;
+	DWORD *rgb = rgbQuard;      //from Graph.c    ？？？
+    char *romname = "/home/kqs/Project/UBNES/ROM/test.nes";      //ROM文件路径
+    long FrameStartTime;        //用于控制帧率
+    long SleepTime;             //用于控制帧率
     SDL_Init(SDL_INIT_EVERYTHING);
-    atexit (SDL_Quit);  
-    SDL_Surface *backpic=NULL;
-    SDL_Surface *cartpic=NULL;
-    screen = SDL_SetVideoMode (640, 480, 32, SDL_SWSURFACE | SDL_DOUBLEBUF);
-    SDL_WM_SetCaption ("NES Simulator", NULL);
+    atexit(SDL_Quit);          //注册终止函数，相当于程序退出时执行SDL_Quit() 
+    screen = SDL_SetVideoMode(640, 480, 32, SDL_SWSURFACE | SDL_DOUBLEBUF);
+    SDL_WM_SetCaption("NES Simulator for Ubuntu", NULL);
     SDL_WM_SetIcon(load_image("/home/kqs/Project/UBNES/res/icon1.bmp"),NULL);
-    cartpic=load_image("/home/kqs/Project/UBNES/res/cart.bmp");
-    backpic=load_image("/home/kqs/Project/UBNES/res/back.bmp" ) ;
-    double FramePeriod = 1000.0 / (NesCfg->FrameRate);
-    ScreenBit=(BYTE*)malloc(sizeof(BYTE)*256*240);  
+    cartpic = load_image("/home/kqs/Project/UBNES/res/cart.bmp");     //游戏选择背景图片
+    backpic = load_image("/home/kqs/Project/UBNES/res/back.bmp" );    //主界面背景图片
+    double FramePeriod = 1000.0 / (NesCfg->FrameRate);       //from NES.c  NesCfg指向配置信息数据，默认NTSC制式
+    ScreenBit = (BYTE*)malloc(sizeof(BYTE)*256*240);         //该内存区域存放屏幕显示，分辨率256X240
 
-Re: apply_surface( 0,0, backpic, screen);
-    InitJoypad();
-    NES_Init();
-    NES_LoadRom(romname);
-	CreateMapper(MapperNo); 
+//游戏重新载入运行入口
+Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背景图片
+    InitJoypad();                            //from Joypad.c  手柄初始化   ？？？
+    NES_Init();                              //from NES.c     初始化  ？？？
+    NES_LoadRom(romname);                    //
+	CreateMapper(MapperNo);                  //
     NES_Start(); 
       
     while(!done) {    

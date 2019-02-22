@@ -5,7 +5,7 @@
 #define PAT_BLOCK_SIZE  0x2000
 
 //变量定义
-typedef struct tagNESCONFIG
+typedef struct tagNESCONFIG      //NES系统配置数据，分为NTSC和PAL制式
 {
     float BaseClock;         
     float CpuClock;          
@@ -17,7 +17,7 @@ typedef struct tagNESCONFIG
     int FrameCycles;         
     int FrameIrqCycles;      
     int FrameRate;           
-    float   FramePeriod;     
+    float FramePeriod;     
 } NESCONFIG, *LPNESCONFIG;
 
 NESCONFIG NESCONFIG_NTSC =
@@ -48,7 +48,7 @@ NESCONFIG NESCONFIG_PAL =
     50,              
     1000.0f / 50.0f  
 };
-NESCONFIG * NesCfg = &NESCONFIG_NTSC;
+NESCONFIG *NesCfg = &NESCONFIG_NTSC;      //默认NTSC
 
 BYTE RomHeader[16]; 
 BYTE RAM[0x2000];
