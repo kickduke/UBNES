@@ -1,8 +1,8 @@
 #include <memory.h>
 
 //宏定义
-#define PRG_BLOCK_SIZE  0x4000
-#define PAT_BLOCK_SIZE  0x2000
+#define PRG_BLOCK_SIZE  0x4000     //Cartidge的单粒PROM固定大小16KB，颗粒数量对应Romheader[4]     
+#define PAT_BLOCK_SIZE  0x2000     //Cartidge的单粒VROM固定大小8KB，颗粒数量对应Romheader[5]
 
 //变量定义
 typedef struct tagNESCONFIG      //NES系统配置数据，分为NTSC和PAL制式
@@ -50,12 +50,12 @@ NESCONFIG NESCONFIG_PAL =
 };
 NESCONFIG *NesCfg = &NESCONFIG_NTSC;      //默认NTSC
 
-BYTE RomHeader[16]; 
-BYTE RAM[0x2000];
-BYTE SRAM[0x2000];  
-BYTE* CPU_MEM_BANK[8]; 
-BYTE * PRGBlock = NULL;
-BYTE * PatternTable = NULL; 
+BYTE RomHeader[16];       //ROM文件头
+BYTE RAM[0x2000];         //CPU逻辑地址0x0000-0x1FFF 其中0x0000-0x07FF为PRAM
+BYTE SRAM[0x2000];        //CPU逻辑地址0x6000-0x7FFF 
+BYTE *CPU_MEM_BANK[8];     
+BYTE *PRGBlock = NULL;
+BYTE *PatternTable = NULL; 
 BYTE NameTable[0x800];       
 BYTE* ScreenBit;
 
@@ -68,7 +68,7 @@ int VROM_2K_SIZE;
 int VROM_4K_SIZE;
 int VROM_8K_SIZE;
 int MapperNo;
-BYTE VRAM[ 4 * 1024];
+BYTE VRAM[4 * 1024];
 
 //函数定义
 void NES_Init()                           
@@ -215,20 +215,20 @@ void SetNameTable_Bank(int bank0, int bank1, int bank2, int bank3)
 int NES_LoadRom(char *FileName)
 {
     FILE *fp;
-    fp=fopen(FileName,"rb");
-    fread(RomHeader,sizeof(BYTE),16,fp);  
+    fp = fopen(FileName,"rb");
+    fread(RomHeader, sizeof(BYTE), 16, fp);  
     memset(CPU_MEM_BANK, 0, sizeof(CPU_MEM_BANK));
     memset(PPU_MEM_BANK, 0, sizeof(PPU_MEM_BANK));
     memset(SRAM, 0, sizeof(SRAM));
     memset(VRAM, 0, sizeof(VRAM));
      
     if (RomHeader[4] > 0) {
-        PRGBlock = (BYTE*)malloc(RomHeader[4] * PRG_BLOCK_SIZE*sizeof(BYTE));
-        fread(PRGBlock, sizeof(BYTE),RomHeader[4] * PRG_BLOCK_SIZE,fp);
+        PRGBlock = (BYTE*)malloc(RomHeader[4] * PRG_BLOCK_SIZE * sizeof(BYTE));   //为PROM分配内存空间 
+        fread(PRGBlock, sizeof(BYTE), RomHeader[4] * PRG_BLOCK_SIZE, fp);         //从ROM文件读入PROM数据到内存
     }
     if (RomHeader[5] > 0) {
-        PatternTable = (BYTE*)malloc(RomHeader[5] * PAT_BLOCK_SIZE*sizeof(BYTE));
-        fread(PatternTable, sizeof(BYTE),RomHeader[5] * PAT_BLOCK_SIZE,fp);
+        PatternTable = (BYTE*)malloc(RomHeader[5] * PAT_BLOCK_SIZE*sizeof(BYTE)); //为VROM分配内存空间
+        fread(PatternTable, sizeof(BYTE),RomHeader[5] * PAT_BLOCK_SIZE, fp);      //从ROM文件读入VROM数据到内存
     }
     fclose(fp); 
     MapperNo = RomHeader[6] >> 4;

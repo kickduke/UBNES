@@ -51,8 +51,8 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
         FrameStartTime = SDL_GetTicks();
         NES_FrameExec();
         if ( SDL_MUSTLOCK(screen) ) {
-            if (SDL_LockSurface(screen) < 0 ) {
-                return 0;
+            if (SDL_LockSurface(screen) < 0) {
+                return -1;
             } 
         } 
         for(pixely=0;pixely<240;pixely++) {
