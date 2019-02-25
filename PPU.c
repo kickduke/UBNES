@@ -29,8 +29,8 @@ typedef struct tagSPRITE
     BYTE Attribute;
     BYTE X;
 } SPRITE; 
-SPRITE * Sprite = (SPRITE *)SPRAM;
-BYTE* PPU_MEM_BANK[12]; 
+SPRITE *Sprite = (SPRITE *)SPRAM;
+BYTE *PPU_MEM_BANK[12];     //指向12个1KB的bank，对应PPU的0x0000-0x2FFF
      
 BYTE INT_pending;
 BYTE *m_PatternTable;

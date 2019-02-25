@@ -167,7 +167,7 @@ void SetPROM002_32K_Bank(int bank0, int bank1, int bank2, int bank3)
 void SetVROM_1K_Bank(BYTE page, int bank)
 {
     bank %= VROM_1K_SIZE;
-    PPU_MEM_BANK[page] = PatternTable + 0x0400 * bank;
+    PPU_MEM_BANK[page] = PatternTable + 0x0400 * bank;   //from PPU.c 指向12个1KB的bank
 }
 
 
@@ -231,23 +231,22 @@ int NES_LoadRom(char *FileName)
         fread(PatternTable, sizeof(BYTE),RomHeader[5] * PAT_BLOCK_SIZE, fp);      //从ROM文件读入VROM数据到内存
     }
     fclose(fp); 
-    MapperNo = RomHeader[6] >> 4;
-    PROM_8K_SIZE  = RomHeader[4] * 2;      
-    PROM_16K_SIZE = RomHeader[4];
+    MapperNo = RomHeader[6] >> 4;             //Mapper编号低两位
+    PROM_8K_SIZE  = RomHeader[4] * 2;         //大小为8KB的PROM颗粒数量（换算）
+    PROM_16K_SIZE = RomHeader[4];             
     PROM_32K_SIZE = RomHeader[4] / 2;
-    VROM_1K_SIZE = RomHeader[5] * 8;
+    VROM_1K_SIZE = RomHeader[5] * 8;          //大小为1KB的VROM颗粒数量（换算）
     VROM_2K_SIZE = RomHeader[5] * 4;
     VROM_4K_SIZE = RomHeader[5] * 2;
     VROM_8K_SIZE = RomHeader[5];
 
-    if (VROM_8K_SIZE) {
-        SetVROM_8K_Bank(0);
+    if(VROM_8K_SIZE) {
+        SetVROM_8K_Bank(0);    //将VROM映射到PPU的逻辑地址中
+    }else {
+        SetSRAM_8K_Bank(0);    //类似mapper002没有VROM，将SRAM映射到PPU的逻辑地址中
     }
-    else {
-        SetSRAM_8K_Bank(0);
-    }
-    if (RomHeader[6] & 0x2) {
-		CPU_MEM_BANK[3] = SRAM;
+    if(RomHeader[6] & 0x2) {   //存在SRAM
+		CPU_MEM_BANK[3] = SRAM;   //对应CPU逻辑地址的0x6000-0x7FFF
     }
     if (RomHeader[6] & 0x01) {
         SetNameTable_Bank(0, 1, 0, 1);
@@ -259,7 +258,7 @@ int NES_LoadRom(char *FileName)
 }
 
 
-void  ExecOnBaseCycle(int BaseCycle);
+void ExecOnBaseCycle(int BaseCycle);
 void NES_FrameExec()
 {
     int i;
