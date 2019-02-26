@@ -70,15 +70,15 @@ int VROM_8K_SIZE;
 int MapperNo;
 BYTE VRAM[4 * 1024];     //PPU逻辑地址0x2000-0x2FFF的数据 
 
-//函数定义
+//生成0-255对应的反转数组？？
 void NES_Init()                           
 {   
     int i,j;
-    for ( i = 0; i < 256; i++) {
+    for(i = 0; i < 256; i++) {
         BYTE c = 0;
         BYTE mask = 0x80;
-        for ( j = 0; j < 8; j++) {
-            if (i & (1 << j)) {
+        for(j = 0; j < 8; j++) {
+            if(i & (1 << j)) {
                 c |= (mask >> j);
             }
         }
@@ -87,15 +87,17 @@ void NES_Init()
 }
 
 
+//释放PROM内存空间
 void NES_ReleasePRGBlock()
 {
-    if (PRGBlock) {
+    if(PRGBlock) {
         free(PRGBlock);
         PRGBlock = NULL;
     }
 }
 
 
+//释放VROM内存空间
 void NES_ReleasePatternTable()
 {
     if (PatternTable) {
@@ -105,10 +107,12 @@ void NES_ReleasePatternTable()
 }
 
 
+//返回NES是否运行
 int NES_IsRunning()
 {
     return bIsRunning;
 }
+
 
 void CPU6502Reset();
 void NES_Start()
@@ -122,9 +126,10 @@ void NES_Start()
 }
 
 
+//NES关闭
 void NES_Stop()
 {
-	if (NES_IsRunning()) {
+	if(NES_IsRunning()) {
 		NES_ReleasePRGBlock();
 		NES_ReleasePatternTable();
 	}
@@ -132,6 +137,7 @@ void NES_Stop()
 }
 
 
+//将PROM数据映射到CPU逻辑地址的某一页上，页大小为8KB
 void SetPROM_8K_Bank(BYTE page, int bank)
 {
     bank %= PROM_8K_SIZE;
@@ -139,6 +145,7 @@ void SetPROM_8K_Bank(BYTE page, int bank)
 }
 
 
+//16KB的PROM映射到CPU逻辑地址
 void SetPROM_16K_Bank(BYTE page, int bank)
 {
     SetPROM_8K_Bank(page + 0, bank * 2 + 0);
@@ -146,6 +153,7 @@ void SetPROM_16K_Bank(BYTE page, int bank)
 }
 
 
+//32KB的PROM映射到CPU逻辑地址
 void SetPROM_32K_Bank(int bank)
 {
 	SetPROM_8K_Bank(4, bank * 4 + 0);
@@ -155,6 +163,7 @@ void SetPROM_32K_Bank(int bank)
 }
 
 
+//？？和上面区别？
 void SetPROM002_32K_Bank(int bank0, int bank1, int bank2, int bank3)
 {
 	SetPROM_8K_Bank(4, bank0);
@@ -164,6 +173,7 @@ void SetPROM002_32K_Bank(int bank0, int bank1, int bank2, int bank3)
 }
 
 
+//将VROM数据映射到PPU逻辑地址的某一页上，每页大小1KB
 void SetVROM_1K_Bank(BYTE page, int bank)
 {
     bank %= VROM_1K_SIZE;
@@ -181,6 +191,7 @@ void SetVROM_8K_Bank(int bank)
 }
 
 
+//将SRAM数据映射到PPU逻辑地址的某一页上，每页大小1KB
 void SetSRAM_1K_Bank(BYTE page, int bank)
 {
     bank &= 0x1F;
@@ -188,7 +199,7 @@ void SetSRAM_1K_Bank(BYTE page, int bank)
 }
 
 
-//将SRAM的数据映射到PPU_MEM_BANK，每个bank大小1KB
+//将8KB的SRAM数据映射到PPU_MEM_BANK的8页上，每页大小1KB
 void SetSRAM_8K_Bank(int bank)   
 {
     int i;
@@ -198,6 +209,7 @@ void SetSRAM_8K_Bank(int bank)
 }
 
 
+//将VRAM数据映射到PPU逻辑地址的某一页上，每页大小1KB
 void SetVRAM_1K_Bank(BYTE page, int bank)
 {
     bank &= 3;          
@@ -205,6 +217,7 @@ void SetVRAM_1K_Bank(BYTE page, int bank)
 }
 
 
+//将命名表（VRAM）映射到PPU逻辑地址的4页上，区分垂直、水平镜像
 void SetNameTable_Bank(int bank0, int bank1, int bank2, int bank3)
 {
     SetVRAM_1K_Bank( 8, bank0);

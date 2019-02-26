@@ -43,7 +43,7 @@ int main(int argc, char* argv[])
 Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背景图片
     InitJoypad();                            //from Joypad.c  手柄初始化   ？？？
     NES_Init();                              //from NES.c     初始化  ？？？
-    NES_LoadRom(romname);                    //
+    NES_LoadRom(romname);                    //from NES.c     加载ROM文件、获取ROM信息并进行初步的CPU、PPU逻辑地址映射
 	CreateMapper(MapperNo);                  //
     NES_Start(); 
       
