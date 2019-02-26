@@ -51,13 +51,13 @@ NESCONFIG NESCONFIG_PAL =
 NESCONFIG *NesCfg = &NESCONFIG_NTSC;      //默认NTSC
 
 BYTE RomHeader[16];       //ROM文件头
-BYTE RAM[0x2000];         //CPU逻辑地址0x0000-0x1FFF 其中0x0000-0x07FF为PRAM
-BYTE SRAM[0x2000];        //CPU逻辑地址0x6000-0x7FFF 
-BYTE *CPU_MEM_BANK[8];     
+BYTE RAM[0x2000];         //CPU逻辑地址0x0000-0x1FFF的数据 其中0x0000-0x07FF为PRAM
+BYTE SRAM[0x2000];        //CPU逻辑地址0x6000-0x7FFF的数据 
+BYTE *CPU_MEM_BANK[8];    //CPU逻辑地址，指向8个8KB的page 
 BYTE *PRGBlock = NULL;
 BYTE *PatternTable = NULL; 
 BYTE NameTable[0x800];       
-BYTE* ScreenBit;
+BYTE *ScreenBit;
 
 int bIsRunning = FALSE;
 int PROM_8K_SIZE;
@@ -68,7 +68,7 @@ int VROM_2K_SIZE;
 int VROM_4K_SIZE;
 int VROM_8K_SIZE;
 int MapperNo;
-BYTE VRAM[4 * 1024];
+BYTE VRAM[4 * 1024];     //PPU逻辑地址0x2000-0x2FFF的数据 
 
 //函数定义
 void NES_Init()                           
@@ -167,10 +167,11 @@ void SetPROM002_32K_Bank(int bank0, int bank1, int bank2, int bank3)
 void SetVROM_1K_Bank(BYTE page, int bank)
 {
     bank %= VROM_1K_SIZE;
-    PPU_MEM_BANK[page] = PatternTable + 0x0400 * bank;   //from PPU.c 指向12个1KB的bank
+    PPU_MEM_BANK[page] = PatternTable + 0x0400 * bank;   //from PPU.c   PPU的逻辑地址
 }
 
 
+//将VROM的数据映射到PPU_MEM_BANK,每个bank大小1KB
 void SetVROM_8K_Bank(int bank)
 {
     int i;
@@ -187,7 +188,8 @@ void SetSRAM_1K_Bank(BYTE page, int bank)
 }
 
 
-void SetSRAM_8K_Bank(int bank)
+//将SRAM的数据映射到PPU_MEM_BANK，每个bank大小1KB
+void SetSRAM_8K_Bank(int bank)   
 {
     int i;
     for ( i = 0; i < 8; i++) {
@@ -212,6 +214,7 @@ void SetNameTable_Bank(int bank0, int bank1, int bank2, int bank3)
 }
 
 
+//该函数完成ROM文件的载入，并进行PPU和CPU逻辑地址的初步映射
 int NES_LoadRom(char *FileName)
 {
     FILE *fp;
@@ -246,12 +249,12 @@ int NES_LoadRom(char *FileName)
         SetSRAM_8K_Bank(0);    //类似mapper002没有VROM，将SRAM映射到PPU的逻辑地址中
     }
     if(RomHeader[6] & 0x2) {   //存在SRAM
-		CPU_MEM_BANK[3] = SRAM;   //对应CPU逻辑地址的0x6000-0x7FFF
+		CPU_MEM_BANK[3] = SRAM;   //SRAM对应CPU逻辑地址的0x6000-0x7FFF
     }
-    if (RomHeader[6] & 0x01) {
+    if (RomHeader[6] & 0x01) {           //命名表为垂直镜像，映射到PPU_MEM_BANK
         SetNameTable_Bank(0, 1, 0, 1);
     }
-    if(!(RomHeader[6] & 0x01)) {                        
+    if(!(RomHeader[6] & 0x01)) {         //命名表为水平镜像，映射到PPU_MEM_BANK               
         SetNameTable_Bank(0, 0, 1, 1);
     }
     return TRUE;
