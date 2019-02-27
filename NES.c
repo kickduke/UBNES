@@ -115,6 +115,7 @@ int NES_IsRunning()
 
 
 void CPU6502Reset();
+//初始化PRAM、SRAM和VRAM内存空间，
 void NES_Start()
 {
     memset(RAM,       0, sizeof(RAM));
@@ -138,7 +139,7 @@ void NES_Stop()
 
 
 //将PROM数据映射到CPU逻辑地址的某一页上，页大小为8KB
-void SetPROM_8K_Bank(BYTE page, int bank)
+void SetPROM_8K_Bank(BYTE page, int bank)    //page指CPU逻辑地址，bank指ROM中的数据块
 {
     bank %= PROM_8K_SIZE;
     CPU_MEM_BANK[page] = PRGBlock + 0x2000 * bank;
@@ -163,7 +164,7 @@ void SetPROM_32K_Bank(int bank)
 }
 
 
-//？？和上面区别？
+//Mapper002的128KB PROM映射到CPU逻辑地址
 void SetPROM002_32K_Bank(int bank0, int bank1, int bank2, int bank3)
 {
 	SetPROM_8K_Bank(4, bank0);
@@ -279,7 +280,7 @@ void NES_FrameExec()
 {
     int i;
     
-    RanderBottomBG(ScreenBit);          
+    RenderBottomBG(ScreenBit);                 //屏幕背景填充        
     ExecOnBaseCycle(NesCfg->ScanlineCycles);   
     ScanLine(ScreenBit, 0);
     ScanlineStart();
@@ -293,7 +294,6 @@ void NES_FrameExec()
     ExecOnBaseCycle(NesCfg->HDrawCycles);
     ExecOnBaseCycle(NesCfg->HBlankCycles);
 
-     
     VBlankStart();
     ExecOnBaseCycle(NesCfg->HDrawCycles);
     ExecOnBaseCycle(NesCfg->HBlankCycles);

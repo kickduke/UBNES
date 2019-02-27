@@ -2,12 +2,12 @@
 #define NMI_VECTOR  0xFFFA       
 #define RES_VECTOR  0xFFFC       
 #define IRQ_VECTOR  0xFFFE       
-#define C_FLAG      0x01         
-#define Z_FLAG      0x02         
+#define C_FLAG      0x01      //P寄存器的各功能位        
+#define Z_FLAG      0x02      //零标志位    
 #define I_FLAG      0x04         
 #define D_FLAG      0x08         
 #define B_FLAG      0x10         
-#define R_FLAG      0x20         
+#define R_FLAG      0x20      //常置1        
 #define V_FLAG      0x40         
 #define N_FLAG      0x80     
 
@@ -17,7 +17,7 @@ BYTE Y;
 WORD PC;
 BYTE S;
 BYTE P;   
-signed long long m_BaseCycle;
+signed long long m_BaseCycle;    //base clock 基频，是6502CPU主频的12倍
 signed long long m_EmuCycle;
 int m_DMACycle;
 BYTE ZN_Table[256];
@@ -183,14 +183,15 @@ WORD CPU6502ReadW(WORD addr)
 }
 
 
+//初始化CPU
 void CPU6502Reset()       
 {
     int i;
-    A  = 0x00;
-    X  = 0x00;
-    Y  = 0x00;
-    S  = 0xFF;
-    PC = CPU6502ReadW(RES_VECTOR);
+    A  = 0x00;     //累加器
+    X  = 0x00;     //变址X寄存器
+    Y  = 0x00;     //变址Y寄存器
+    S  = 0xFF;     //堆栈寄存器
+    PC = CPU6502ReadW(RES_VECTOR);     //程序计数器
     P  = Z_FLAG | R_FLAG;            
     
     INT_pending = 0;
@@ -198,9 +199,10 @@ void CPU6502Reset()
     m_EmuCycle  = 0;
     m_DMACycle  = 0;
     
-    ZN_Table[0] = Z_FLAG;                         
-    for( i = 1; i < 256; i++)
+    ZN_Table[0] = Z_FLAG;       //用途？？？                  
+    for(i = 1; i < 256; i++) {
         ZN_Table[i] = (i & 0x80) ? N_FLAG : 0;
+    }
 }
 
 
@@ -1011,7 +1013,7 @@ int Exec(int CpuCycle)
 
 void ExecOnBaseCycle(int BaseCycle)
 {
-     int Cycle ;
+     int Cycle;
      m_BaseCycle += BaseCycle;
      Cycle = (int)((m_BaseCycle / 12) - m_EmuCycle);
      if (Cycle > 0) {                                                 

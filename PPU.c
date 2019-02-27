@@ -21,7 +21,7 @@
 #define SP_LEVEL            0x20     
 #define SP_HIGHCOLOR        0X03 
 
-BYTE SPRAM[0x100]; 
+BYTE SPRAM[0x100];          //SPR-RAM  大小为256B
 typedef struct tagSPRITE
 {
     BYTE Y;
@@ -35,13 +35,13 @@ BYTE *PPU_MEM_BANK[12];     //PPU逻辑地址0x0000-0x2FFF。12个1KB的bank
 BYTE INT_pending;
 BYTE *m_PatternTable;
 BYTE *m_NameTable[4];
-BYTE m_REG[0x04];                        
+BYTE m_REG[0x04];                //？？？        
 BYTE BGPal[0x10];            
 BYTE SPPal[0x10];            
 BYTE RevertByte[256];   
 BYTE m_Reg2007Temp=0;
 int m_CurLineSprite;
-WORD m_ByteIndex;
+WORD m_ByteIndex;               //？？？
 WORD m_CurByteIndex;
 
 
@@ -182,9 +182,10 @@ void ScanlineStart()
 }
 
 
-void RanderBottomBG(BYTE* pBit)
+//屏幕背景填充
+void RenderBottomBG(BYTE* pBit)
 {
-    memset(pBit, BGPal[0], 256 * 240);
+    memset(pBit, BGPal[0], 256 * 240);     //BGPal？？？
 }
 
 

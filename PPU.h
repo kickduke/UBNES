@@ -6,7 +6,7 @@ void WriteToPort(WORD addr, BYTE val);
 BYTE PPU6528Read(WORD addr);
 void PPU6528Write(WORD addr, BYTE val);
 void ScanlineStart();
-void RanderBottomBG(BYTE* pBit)  ;
+void RenderBottomBG(BYTE* pBit)  ;
 void ScanLine(BYTE* pBit, int LineNo);
 void ScanHitPoint(BYTE LineNo) ;    
 void ScanSprite(BYTE* pBit, BYTE LineNo, int bBackLevel);
