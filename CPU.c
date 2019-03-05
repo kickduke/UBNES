@@ -1,7 +1,7 @@
 #define IRQ_FLAG    0x02         
-#define NMI_VECTOR  0xFFFA       
-#define RES_VECTOR  0xFFFC       
-#define IRQ_VECTOR  0xFFFE       
+#define NMI_VECTOR  0xFFFA    //存放NMI中断服务程序入口地址    
+#define RES_VECTOR  0xFFFC    //存放RESET中断服务程序入口地址    
+#define IRQ_VECTOR  0xFFFE    //存放BRK中断服务程序入口地址   
 #define C_FLAG      0x01      //P寄存器的各功能位        
 #define Z_FLAG      0x02      //零标志位    
 #define I_FLAG      0x04         
@@ -17,8 +17,8 @@ BYTE Y;
 WORD PC;
 BYTE S;
 BYTE P;   
-signed long long m_BaseCycle;    //base clock 基频，是6502CPU主频的12倍
-signed long long m_EmuCycle;
+signed long long m_BaseCycle;    //时钟源周期，对应base clock基频，是6502CPU主频的12倍
+signed long long m_EmuCycle;     //CPU时钟周期，对应CPU clock主频。属于模拟CPU时钟周期，每轮执行的周期数可能比实际硬件中的多
 int m_DMACycle;
 BYTE ZN_Table[256];
 BYTE gCycle[256] =
@@ -199,17 +199,18 @@ void CPU6502Reset()
     m_EmuCycle  = 0;
     m_DMACycle  = 0;
     
-    ZN_Table[0] = Z_FLAG;       //用途？？？                  
+    ZN_Table[0] = Z_FLAG;       //用于判断P寄存器的Z、N位                  
     for(i = 1; i < 256; i++) {
         ZN_Table[i] = (i & 0x80) ? N_FLAG : 0;
     }
 }
 
 
+//从CPU逻辑地址读取数据，地址通过程序计数器PC获取
 BYTE CPU6502Read(WORD addr)
 {
-    if( addr < 0x2000 ) {
-        return  RAM[addr & 0x07FF];
+    if(addr < 0x2000) {     //读取的是PRAM
+        return  RAM[addr & 0x07FF];    //0x0800-0x1FFF是镜像
     }else {
         return NES_Read(addr);
     }
@@ -226,27 +227,28 @@ void CPU6502Write(WORD addr, BYTE val)
 }
 
 
+//执行CpuCycle个周期的指令
 int Exec(int CpuCycle)
 {
     int Cycle = 0;
-    register WORD EA;
+    register WORD EA;     //提示编译器尽量使用CPU寄存器存放该变量数据
     register WORD ET;
     register WORD WT;
     register BYTE DT;
-    BYTE OpCode;
+    BYTE OpCode;         //操作码，对应CPU的各指令
 
-    while (Cycle < CpuCycle) {
-        if(m_DMACycle > 0) {
-            if ((CpuCycle - Cycle) <= m_DMACycle) {
+    while(Cycle < CpuCycle) {
+        if(m_DMACycle > 0) {                   //存在DMA过程
+            if ((CpuCycle - Cycle) <= m_DMACycle) {  //当前剩余CPU周期只能部分完成DMA过程
                 m_DMACycle -= (CpuCycle - Cycle);
-                Cycle = CpuCycle;
-                break;
-            }else {
+                Cycle = CpuCycle;    //本轮全部CPU周期被DMA过程全部消耗
+                break;               //退出while循环，本轮CPU使用结束
+            }else {                      //完成DMA后有剩余CPU周期可以执行其他指令
                 Cycle += m_DMACycle;
-                m_DMACycle = 0;
+                m_DMACycle = 0;          //DMA过程执行完成
             }
         }
-        OpCode = CPU6502Read(PC++);
+        OpCode = CPU6502Read(PC++);      //剩余可用的CPU周期用来执行指令
         switch (OpCode) {
         case 0x00 :      
             BRK();
@@ -996,13 +998,13 @@ int Exec(int CpuCycle)
         }
         Cycle += gCycle[OpCode];
         
-        if(INT_pending & NMI_FLAG) {
+        if(INT_pending & NMI_FLAG) {   //from PPU.c NMI中断处理，即VBLANK阶段 ？？？
             INT_pending &= ~NMI_FLAG;     
             PUSH(PC>>8);                       
             PUSH(PC&0xFF);                     
             CLR_FLAG(B_FLAG);                 
             PUSH(P);                             
-            SET_FLAG( I_FLAG );                 
+            SET_FLAG(I_FLAG);                 
             PC = CPU6502ReadW(NMI_VECTOR);        
             Cycle += 7;                             
         }
@@ -1011,12 +1013,13 @@ int Exec(int CpuCycle)
 }
 
 
+//运行BaseCycle数量的时钟源周期
 void ExecOnBaseCycle(int BaseCycle)
 {
      int Cycle;
      m_BaseCycle += BaseCycle;
-     Cycle = (int)((m_BaseCycle / 12) - m_EmuCycle);
-     if (Cycle > 0) {                                                 
+     Cycle = (int)((m_BaseCycle / 12) - m_EmuCycle);   //获取本轮可用的CPU时钟周期 为什么采用累计计算见论文P40 
+     if(Cycle > 0) {                                                 
         m_EmuCycle += Exec(Cycle);
      }
 }

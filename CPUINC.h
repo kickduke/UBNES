@@ -5,7 +5,7 @@
 #define     DWORD  unsigned  int 
 
 // STACK操作(入栈操作和出栈操作)
-#define	PUSH(V)		{ RAM[(S--) + 0x100]=(V); }
+#define	PUSH(V)		{ RAM[(S--) + 0x100]=(V); }     //0x0100-0x01FF是系统堆栈区
 #define	POP()		RAM[(++S) + 0x100]
 
 #define	SET_ZN_FLAG(A)	{ P &= ~(Z_FLAG|N_FLAG); P |= ZN_Table[(BYTE)(A)]; }

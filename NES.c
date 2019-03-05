@@ -280,8 +280,8 @@ void NES_FrameExec()
 {
     int i;
     
-    RenderBottomBG(ScreenBit);                 //屏幕背景填充        
-    ExecOnBaseCycle(NesCfg->ScanlineCycles);   
+    RenderBottomBG(ScreenBit);                   //屏幕背景填充        
+    ExecOnBaseCycle(NesCfg->ScanlineCycles);     //先运行扫描一行屏幕的时钟源周期1364
     ScanLine(ScreenBit, 0);
     ScanlineStart();
 
