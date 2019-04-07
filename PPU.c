@@ -10,11 +10,11 @@
 #define PPU_NOCOLOR         0x01     
 #define PPU_LEFT8COL        0x02     
 #define PPU_SPRLEFT8COL     0x04     
-#define PPU_SHOWBG          0x08     
-#define PPU_SHOWSPR         0x10     
+#define PPU_SHOWBG          0x08     //0x2001[3] 屏幕显示背景使能 
+#define PPU_SHOWSPR         0x10     //0x2001[4] 精灵显示使能
 #define PPU_VBLANK_FLAG     0x80
 #define PPU_SPHIT_FLAG      0x40
-#define PPU_SPMAX_FLAG      0x20
+#define PPU_SPMAX_FLAG      0x20     //0x2002[5] 扫描线精灵计数>8
 #define PPU_WENABLE_FLAG    0x10
 #define SP_VREVERT          0x80     
 #define SP_HREVERT          0x40     
@@ -35,14 +35,14 @@ BYTE *PPU_MEM_BANK[12];     //PPU逻辑地址0x0000-0x2FFF。12个1KB的bank
 BYTE INT_pending;
 BYTE *m_PatternTable;
 BYTE *m_NameTable[4];
-BYTE m_REG[0x04];                //？？？        
+BYTE m_REG[0x04];                //PPU寄存器0x2000-0x2003        
 BYTE BGPal[0x10];                //？？？ 
 BYTE SPPal[0x10];            
 BYTE RevertByte[256];   
 BYTE m_Reg2007Temp=0;
 int m_CurLineSprite;
-WORD m_ByteIndex;               //？？？
-WORD m_CurByteIndex;
+WORD m_ByteIndex;               //当前命名表逻辑地址（起始地址）
+WORD m_CurByteIndex;            //？？？
 
 
 void  NMI()
@@ -136,7 +136,7 @@ void WriteToPort(WORD addr, BYTE val)
 {
     switch (addr) {
     case 0x2000 : 
-        m_ByteIndex = (m_ByteIndex & 0xF3FF) | (((WORD)val & 0x03) << 10);  
+        m_ByteIndex = (m_ByteIndex & 0xF3FF) | (((WORD)val & 0x03) << 10);  //将命名表序号(00\01\10\11)转换成命名表的CPU逻辑地址
         if((val & 0x80) && !(m_REG[0] & 0x80) && (m_REG[2] & 0x80)) {
              NMI();
         }
@@ -177,7 +177,7 @@ void ScanlineStart()
 {
     if (m_REG[1] & (PPU_SHOWBG | PPU_SHOWSPR)) {
         m_CurLineOft = m_ScreenOffset;
-        m_CurByteIndex = m_ByteIndex;
+        m_CurByteIndex = m_ByteIndex;      //获取当前命名表逻辑地址（起始地址）
     }
 }
 
@@ -185,7 +185,7 @@ void ScanlineStart()
 //屏幕背景填充
 void RenderBottomBG(BYTE* pBit)
 {
-    memset(pBit, BGPal[0], 256 * 240);     //BGPal？？？
+    memset(pBit, BGPal[0], 256 * 240);     //BGPal背景调色板
 }
 
 
@@ -316,22 +316,22 @@ void ScanSprite(BYTE* pBit, BYTE LineNo, int bBackLevel)
 }
 
 
+//扫描线绘制背景
 void ScanBG(BYTE* pBit, BYTE LineNo)
 {
     int i,j;
-	BYTE NTIndex = (m_CurByteIndex >> 10) & 0x3d;	//NameTable index
+	BYTE NTIndex = (m_CurByteIndex >> 10) & 0x3d;	//NameTable index ？？？
 	WORD ByteIndex = ((m_CurLineOft.y + LineNo) % 240 >> 3 << 5) + (m_CurLineOft.x >> 3);
-    if (LineNo + m_CurLineOft.y >= 240) {
+    if(LineNo + m_CurLineOft.y >= 240) {
 		NTIndex ^= 0x2;
 	}
 	BYTE YOft = (LineNo + m_CurLineOft.y) & 0x7;
-	BYTE * pBGPattern = PPU_MEM_BANK[(m_REG[0] & 0x10) >> 2];
+	BYTE *pBGPattern = PPU_MEM_BANK[(m_REG[0] & 0x10) >> 2];           //背景图案表
 	WORD AttrIndex = (((ByteIndex >> 7) & 0x7) << 3) + ((ByteIndex >> 2) & 0x7) + 0x3C0;
 
 	int LoopByte = m_CurLineOft.x & 0x7 ? 33 : 32;
 	for ( i = 0; i < LoopByte; i++) {
-		if (i && !(ByteIndex & 0x1F)) {   //如果一行的tile号为0且i不为0
-		
+		if (i && !(ByteIndex & 0x1F)) {   //如果一行的tile号为0且i不为	
 			AttrIndex &= 0xFFF8;
 			ByteIndex -=32;
 			NTIndex ^= 1;
@@ -363,18 +363,19 @@ void ScanBG(BYTE* pBit, BYTE LineNo)
 }
 
 
+//
 void ScanLine(BYTE* pBit, int LineNo)
 {
-    m_REG[2] &= ~PPU_SPMAX_FLAG;
-    m_CurLineSprite = 0;
+    m_REG[2] &= ~PPU_SPMAX_FLAG;       //扫描线精灵计数位置0，当前扫描线精灵数<=8
+    m_CurLineSprite = 0;               //扫描线精灵计数=0
 
-    if (LineNo < 240 && m_REG[1] & PPU_SHOWSPR) {
+    if (LineNo < 240 && m_REG[1] & PPU_SHOWSPR) {     //若当前扫描线在绘制画面且允许显示精灵，则绘制精灵
         ScanSprite(pBit, LineNo, TRUE); 
     }
-    if (LineNo < 240 && m_REG[1] & PPU_SHOWBG) {
+    if (LineNo < 240 && m_REG[1] & PPU_SHOWBG) {      //若背景非黑屏，绘制背景
         ScanBG(pBit, LineNo);            
     }
-    if (LineNo < 240 && m_REG[1] & PPU_SHOWSPR) {
+    if (LineNo < 240 && m_REG[1] & PPU_SHOWSPR) {    //？？？
         ScanSprite(pBit, LineNo, FALSE);     
         ScanHitPoint(LineNo);            
     }

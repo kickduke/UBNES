@@ -115,7 +115,7 @@ int NES_IsRunning()
 
 
 void CPU6502Reset();
-//初始化PRAM、SRAM和VRAM内存空间，
+//初始化PRAM、SRAM和VRAM内存空间，并初始化CPU和PPU
 void NES_Start()
 {
     memset(RAM,       0, sizeof(RAM));
@@ -281,8 +281,8 @@ void NES_FrameExec()
     int i;
     
     RenderBottomBG(ScreenBit);                   //屏幕背景填充        
-    ExecOnBaseCycle(NesCfg->ScanlineCycles);     //先运行扫描一行屏幕的时钟源周期1364
-    ScanLine(ScreenBit, 0);
+    ExecOnBaseCycle(NesCfg->ScanlineCycles);     //0行扫描 先运行扫描一行屏幕的时钟源周期1364
+    ScanLine(ScreenBit, 0);                      //from PPU.c   扫描第0行    
     ScanlineStart();
 
     for (i = 1; i < 240; i++) {

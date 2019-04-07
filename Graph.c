@@ -1,4 +1,4 @@
-DWORD rgbQuard[64] = 
+DWORD rgbQuard[64] =         //NES颜色表（RGB值） 
 {  
 	0x7F7F7F,  0x2000B0,  0x2800B8,  0x6010A0,
 	0x982078,  0xB01030,  0xA03000,  0x784000,
