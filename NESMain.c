@@ -32,6 +32,7 @@ char reg_bin_list[9];     //用于显示register的二进制
 FILE *fp_apu_tri_log = NULL;      //用于记录APU三角波
 FILE *fp_apu_squa1_log = NULL;    //用于记录APU方波1
 FILE *fp_apu_squa2_log = NULL;    //用于记录APU方波2
+FILE *fp_apu_noise_log = NULL;    //用于记录NOISE
 int log_seq = 0;  //用于log文件计数
 
 //函数声明
@@ -78,13 +79,16 @@ int main(int argc, char* argv[])
     WORD tri_wave_len = 0;
     WORD squa1_wave_len = 0;
     WORD squa2_wave_len = 0;
+    BYTE noise_len_idx = 0;
     BYTE squa1_vol = 0;
     BYTE squa2_vol = 0;
+    BYTE noise_vol = 0;
     BYTE squa1_duty = 0;
     BYTE squa2_duty = 0;
     fp_apu_tri_log = fopen("log/APU_TRI_LOG.txt", "w");
     fp_apu_squa1_log = fopen("log/APU_SQUA1_LOG.txt", "w");
     fp_apu_squa2_log = fopen("log/APU_SQUA2_LOG.txt", "w");
+    fp_apu_noise_log = fopen("log/APU_NOISE_LOG.txt", "w");
 
 
 //游戏重新载入运行入口
@@ -210,6 +214,10 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
         squa2_duty = (0xC0 & apu_reg[4]) >> 6;
         squa2_vol = 0x0F & apu_reg[4];
         fprintf(fp_apu_squa2_log, "%d_%d:%04X:%d:%d:%d\n", second_cnt, frame_cnt, squa2_wave_len, squa2_wave_len, squa2_vol, squa2_duty);
+        ////NOISE
+        noise_vol = 0x0F & apu_reg[12];
+        noise_len_idx = 0x0F & apu_reg[14];
+        fprintf(fp_apu_noise_log, "%d_%d:%04X:%d:%d\n", second_cnt, frame_cnt, noise_len_idx, noise_len_idx, noise_vol);
         frame_cnt = frame_cnt%60 + 1;
         if(frame_cnt == 1) {
             second_cnt++;
