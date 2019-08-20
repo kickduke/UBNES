@@ -16,7 +16,8 @@ BYTE X;
 BYTE Y;
 WORD PC;
 BYTE S;
-BYTE P;   
+BYTE P;
+BYTE apu_reg[22];      //$4000-$4013,$4015寄存器
 signed long long m_BaseCycle;
 signed long long m_EmuCycle;
 int m_DMACycle;
@@ -49,17 +50,17 @@ BYTE NES_ReadReg(WORD addr)
         case 0x08: case 0x09: case 0x0A: case 0x0B:
         case 0x0C: case 0x0D: case 0x0E: case 0x0F:
         case 0x10: case 0x11: case 0x12: case 0x13:
-            return  APURead(addr);                                
-        case    0x15:                                                     
-            return  APURead(addr);                           
-        case    0x14:
+            return APURead(addr);                                
+        case 0x15:                                                     
+            return APURead(addr);                           
+        case 0x14:
             return addr & 0xFF;                          
-        case    0x16:
+        case 0x16:
             return (GetValue(0) | 0x40);                
-        case    0x17:                                            
-            return  GetValue(1) | APURead(addr);
+        case 0x17:                                            
+            return GetValue(1) | APURead(addr);
         default:
-            return   0;
+            return 0;
     }
 }
 
@@ -67,11 +68,11 @@ BYTE NES_ReadReg(WORD addr)
 BYTE NES_Read(WORD addr)
 {
     switch (addr>>13) { 
-        case 0x00 :
+        case 0x00 :     // $0000-0x1FFF
             return RAM[addr & 0x07FF];
-        case 0x01 :  
+        case 0x01 :     // $2000-0x3FFF
             return ReadFromPort(addr & 0xE007);    
-        case 0x02 :             
+        case 0x02 :     // $4000-$5FFF        
             if (addr < 0x401F) {                                                        
                 return NES_ReadReg(addr);
             }else {
@@ -124,9 +125,11 @@ void NES_WriteReg(WORD addr, BYTE val)
         case 0x08: case 0x09: case 0x0A: case 0x0B:
         case 0x0C: case 0x0D: case 0x0E: case 0x0F:
         case 0x10: case 0x11: case 0x12: case 0x13:
-        case 0x15 :
+        case 0x15 :    //APU相关的寄存器
+            apu_reg[addr & 0xFF] = val;
             break;                                                        
-        case 0x14 :                                                                 
+        case 0x14 :
+             apu_reg[addr & 0xFF] = val;
              memcpy(Sprite,  GetRAM(((WORD)val) << 8), 256);       
              m_DMACycle += 514;                                       
             break;
@@ -197,7 +200,11 @@ void CPU6502Reset()
     m_BaseCycle = 0;
     m_EmuCycle  = 0;
     m_DMACycle  = 0;
-    
+
+    for(i = 0; i < 21; i++) {
+        apu_reg[i] = 0;
+    }
+
     ZN_Table[0] = Z_FLAG;                         
     for( i = 1; i < 256; i++)
         ZN_Table[i] = (i & 0x80) ? N_FLAG : 0;

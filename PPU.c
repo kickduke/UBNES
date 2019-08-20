@@ -157,7 +157,7 @@ void WriteToPort(WORD addr, BYTE val)
         }else {
             m_ByteIndex = (m_ByteIndex & 0xFC1F) | ((val & 0xF8) << 2); 
         }
-        SCREENOFFSET_SetValue(&m_ScreenOffset,val);
+        SCREENOFFSET_SetValue(&m_ScreenOffset, val);
         break;
     case 0x2006 :
         if(!ADDRESS_AtLow(&m_Address)) {

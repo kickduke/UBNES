@@ -215,8 +215,8 @@ void SetNameTable_Bank(int bank0, int bank1, int bank2, int bank3)
 int NES_LoadRom(char *FileName)
 {
     FILE *fp;
-    fp=fopen(FileName,"rb");
-    fread(RomHeader,sizeof(BYTE),16,fp);  
+    fp = fopen(FileName, "rb");
+    fread(RomHeader, sizeof(BYTE), 16, fp);          //读取ROM文件头
     memset(CPU_MEM_BANK, 0, sizeof(CPU_MEM_BANK));
     memset(PPU_MEM_BANK, 0, sizeof(PPU_MEM_BANK));
     memset(SRAM, 0, sizeof(SRAM));
