@@ -1,20 +1,22 @@
 /*编译：   
- *gcc -o UBNES NESMain.c -lSDL -lSDL_ttf -lSDL_draw
+ *gcc -o UBNES NESMain.c -lSDL -lSDL_ttf -lSDL_draw -lsoundio -lm
  * */
 #include <stdio.h>
 #include <memory.h>
 #include <stdlib.h>
+#include <math.h>
+#include <soundio/soundio.h>
 #include <SDL/SDL.h>
 #include <SDL/SDL_ttf.h>
 #include <SDL/SDL_draw.h>
 #include "CPUINC.h"
 #include "INC.h"
-#include "APU.h"
 #include "PPU.h"
 #include "Joypad.h"
 #include "NES.h"
 #include "Mapper.h"
 #include "CPU.h"
+#include "APU.h"
 #include "Graph.h"
 #include "SaveLoad.h"
 
@@ -32,7 +34,6 @@ char reg_bin_list[9];     //用于显示register的二进制
 FILE *fp_apu_tri_log = NULL;      //用于记录APU三角波
 FILE *fp_apu_squa1_log = NULL;    //用于记录APU方波1
 FILE *fp_apu_squa2_log = NULL;    //用于记录APU方波2
-FILE *fp_apu_noise_log = NULL;    //用于记录NOISE
 int log_seq = 0;  //用于log文件计数
 
 //函数声明
@@ -79,16 +80,29 @@ int main(int argc, char* argv[])
     WORD tri_wave_len = 0;
     WORD squa1_wave_len = 0;
     WORD squa2_wave_len = 0;
-    BYTE noise_len_idx = 0;
     BYTE squa1_vol = 0;
     BYTE squa2_vol = 0;
-    BYTE noise_vol = 0;
     BYTE squa1_duty = 0;
     BYTE squa2_duty = 0;
+    int write_log_flag = 0;    //若为1,记录APU相关数据到日志文件
     fp_apu_tri_log = fopen("log/APU_TRI_LOG.txt", "w");
     fp_apu_squa1_log = fopen("log/APU_SQUA1_LOG.txt", "w");
     fp_apu_squa2_log = fopen("log/APU_SQUA2_LOG.txt", "w");
-    fp_apu_noise_log = fopen("log/APU_NOISE_LOG.txt", "w");
+    //声音初始化
+    struct SoundIo *soundio = soundio_create();
+    soundio_connect(soundio);
+    soundio_flush_events(soundio);
+    int default_out_device_index = soundio_default_output_device_index(soundio);
+    struct SoundIoDevice *device = soundio_get_output_device(soundio, default_out_device_index);
+    struct SoundIoOutStream *outstream = soundio_outstream_create(device);
+    outstream->format = SoundIoFormatFloat32NE;    
+    outstream->write_callback = write_callback;
+    soundio_outstream_open(outstream);
+    outstream->software_latency = (double)(1.0/12000);   //设置latency为1/60秒
+    if (outstream->layout_error) {
+        fprintf(stderr, "unable to set channel layout: %s\n", soundio_strerror(outstream->layout_error));
+    }
+    soundio_outstream_start(outstream);
 
 
 //游戏重新载入运行入口
@@ -122,7 +136,8 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
         if(SDL_MUSTLOCK(screen)) {
             SDL_UnlockSurface(screen);  
         }
-        SDL_UpdateRect(screen, 0, 0, 1920,1080);          
+        SDL_UpdateRect(screen, 0, 0, 1920,1080);    
+        //SDL事件处理
         SDL_Event event;     
         while(SDL_PollEvent (&event)) {
             switch(event.type) {
@@ -203,24 +218,22 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
         }
         //记录APU输出
         ////三角波
-        tri_wave_len = (0x00 | apu_reg[10]) | ((0x07 & apu_reg[11]) << 8); 
-        fprintf(fp_apu_tri_log, "%d_%d:%04X:%d\n", second_cnt, frame_cnt, tri_wave_len, tri_wave_len);
-        ////方波
-        squa1_wave_len = (0x00 | apu_reg[2]) | ((0x07 & apu_reg[3]) << 8);
-        squa1_duty = (0xC0 & apu_reg[0]) >> 6;
-        squa1_vol = 0x0F & apu_reg[0];
-        fprintf(fp_apu_squa1_log, "%d_%d:%04X:%d:%d:%d\n", second_cnt, frame_cnt, squa1_wave_len, squa1_wave_len, squa1_vol, squa1_duty);
-        squa2_wave_len = (0x00 | apu_reg[6]) | ((0x07 & apu_reg[7]) << 8);
-        squa2_duty = (0xC0 & apu_reg[4]) >> 6;
-        squa2_vol = 0x0F & apu_reg[4];
-        fprintf(fp_apu_squa2_log, "%d_%d:%04X:%d:%d:%d\n", second_cnt, frame_cnt, squa2_wave_len, squa2_wave_len, squa2_vol, squa2_duty);
-        ////NOISE
-        noise_vol = 0x0F & apu_reg[12];
-        noise_len_idx = 0x0F & apu_reg[14];
-        fprintf(fp_apu_noise_log, "%d_%d:%04X:%d:%d\n", second_cnt, frame_cnt, noise_len_idx, noise_len_idx, noise_vol);
-        frame_cnt = frame_cnt%60 + 1;
-        if(frame_cnt == 1) {
-            second_cnt++;
+        if(write_log_flag == 1) {
+            tri_wave_len = (0x00 | apu_reg[10]) | ((0x07 & apu_reg[11]) << 8); 
+            fprintf(fp_apu_tri_log, "%d_%d:%04X:%d\n", second_cnt, frame_cnt, tri_wave_len, tri_wave_len);
+            ////方波
+            squa1_wave_len = (0x00 | apu_reg[2]) | ((0x07 & apu_reg[3]) << 8);
+            squa1_duty = (0xC0 & apu_reg[0]) >> 6;
+            squa1_vol = 0x0F & apu_reg[0];
+            fprintf(fp_apu_squa1_log, "%d_%d:%04X:%d:%d:%d\n", second_cnt, frame_cnt, squa1_wave_len, squa1_wave_len, squa1_vol, squa1_duty);
+            squa2_wave_len = (0x00 | apu_reg[6]) | ((0x07 & apu_reg[7]) << 8);
+            squa2_duty = (0xC0 & apu_reg[4]) >> 6;
+            squa2_vol = 0x0F & apu_reg[4];
+            fprintf(fp_apu_squa2_log, "%d_%d:%04X:%d:%d:%d\n", second_cnt, frame_cnt, squa2_wave_len, squa2_wave_len, squa2_vol, squa2_duty);
+            frame_cnt = frame_cnt%60 + 1;
+            if(frame_cnt == 1) {
+                second_cnt++;
+            }
         }
         SleepTime = (long)FramePeriod - ((long)SDL_GetTicks() - FrameStartTime);    
 		if(SleepTime > 0) {
@@ -233,6 +246,9 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
     fclose(fp_apu_tri_log);
     fclose(fp_apu_squa1_log);
     fclose(fp_apu_squa2_log);
+    soundio_outstream_destroy(outstream);
+    soundio_device_unref(device);
+    soundio_destroy(soundio);
     return 0;           
 }
 

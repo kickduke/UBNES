@@ -1,5 +1,6 @@
 #include "CPU.c"    
 
+BYTE APURead(WORD addr);
 BYTE NES_Read(WORD addr);
 void NES_Write(WORD addr, BYTE val);
 void CPU6502Reset() ;
@@ -14,3 +15,4 @@ void NES_WriteReg(WORD addr, BYTE val);
 BYTE * NES_GetRAM(WORD addr) ;
 void Mapper002_WriteLow(WORD addr, BYTE data);
 void Mapper002_Write(WORD addr, BYTE data);
+

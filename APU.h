@@ -1,3 +1,3 @@
 #include "APU.c"
 
-BYTE APURead(WORD addr);
+static void write_callback(struct SoundIoOutStream *outstream, int frame_count_min, int frame_count_max);

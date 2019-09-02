@@ -42,6 +42,16 @@ BYTE gCycle[256] =
     2, 5, 0, 0, 0, 4, 6, 0, 2, 4, 0, 0, 0, 4, 7, 0
 };
 
+BYTE APURead(WORD addr)
+{
+    BYTE data = 0;
+    if(addr == 0x4017) {
+        data = (1 << 6);
+    }
+    return data;
+}
+
+
 BYTE NES_ReadReg(WORD addr)                        
 {
     switch (addr & 0xFF) {
