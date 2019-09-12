@@ -31,9 +31,10 @@ TTF_Font *font_mid = NULL;
 TTF_Font *font_small = NULL;
 char byte_color[8] = "";   //绘制pattern_table用
 char reg_bin_list[9];     //用于显示register的二进制
-FILE *fp_apu_tri_log = NULL;      //用于记录APU三角波
+/*FILE *fp_apu_tri_log = NULL;      //用于记录APU三角波
 FILE *fp_apu_squa1_log = NULL;    //用于记录APU方波1
 FILE *fp_apu_squa2_log = NULL;    //用于记录APU方波2
+FILE *fp_apu_noise_log = NULL;    //用于记录NOISE*/
 int log_seq = 0;  //用于log文件计数
 
 //函数声明
@@ -75,19 +76,21 @@ int main(int argc, char* argv[])
     int mouse_x = 0;
     int mouse_y = 0;
     char mouse_pos[20] = "";
-    int frame_cnt = 1;
-    int second_cnt = 0;
     WORD tri_wave_len = 0;
     WORD squa1_wave_len = 0;
     WORD squa2_wave_len = 0;
+    BYTE noise_len_idx = 0;
     BYTE squa1_vol = 0;
     BYTE squa2_vol = 0;
+    BYTE noise_vol = 0;
     BYTE squa1_duty = 0;
     BYTE squa2_duty = 0;
-    int write_log_flag = 0;    //若为1,记录APU相关数据到日志文件
+    /*int write_log_flag = 0;    //若为1,记录APU相关数据到日志文件
     fp_apu_tri_log = fopen("log/APU_TRI_LOG.txt", "w");
     fp_apu_squa1_log = fopen("log/APU_SQUA1_LOG.txt", "w");
     fp_apu_squa2_log = fopen("log/APU_SQUA2_LOG.txt", "w");
+    fp_apu_noise_log = fopen("log/APU_NOISE_LOG.txt", "w");
+    fp_callback_log = fopen("log/CALLBACK.txt", "w");*/
     //声音初始化
     struct SoundIo *soundio = soundio_create();
     soundio_connect(soundio);
@@ -95,10 +98,20 @@ int main(int argc, char* argv[])
     int default_out_device_index = soundio_default_output_device_index(soundio);
     struct SoundIoDevice *device = soundio_get_output_device(soundio, default_out_device_index);
     struct SoundIoOutStream *outstream = soundio_outstream_create(device);
-    outstream->format = SoundIoFormatFloat32NE;    
+    //outstream->format = SoundIoFormatFloat32NE;    
+    outstream->format = SoundIoFormatS16LE;   
+    fprintf(stderr, "support:%d\n", soundio_device_supports_format(device, SoundIoFormatS16LE ));
     outstream->write_callback = write_callback;
+    outstream->underflow_callback = underflow_callback;
     soundio_outstream_open(outstream);
-    outstream->software_latency = (double)(1.0/12000);   //设置latency为1/60秒
+    outstream->software_latency = (double)(0.001);   
+    //测试
+    fprintf(stderr, "Output device: %s\n", device->name);
+    fprintf(stderr, "sample_rate:%d\n", outstream->sample_rate);
+    fprintf(stderr, "bytes_per_frame:%d\n", outstream->bytes_per_frame);
+    fprintf(stderr, "channel_count:%d\n", outstream->layout.channel_count);
+    fprintf(stderr, "latency:%f\n", outstream->software_latency);
+    //
     if (outstream->layout_error) {
         fprintf(stderr, "unable to set channel layout: %s\n", soundio_strerror(outstream->layout_error));
     }
@@ -174,7 +187,7 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
                          romno = 1;
                          goto Re;    
                     }else if(event.button.x < 300 + 200 && event.button.x > 300 && event.button.y < 50 + 18 && event.button.y > 50){
-                         romname="/home/kqs/Project/UBNES/ROM/boom.nes"; 
+                         romname="/home/kqs/Project/UBNES/ROM/lsbt.nes"; 
                          romno = 2; 
                          goto Re;    
                     }else if(event.button.x < 300 + 200 && event.button.x > 300 && event.button.y < 90 + 18 && event.button.y > 90) {
@@ -216,7 +229,7 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
                 break;
             }
         }
-        //记录APU输出
+        /*/记录APU输出
         ////三角波
         if(write_log_flag == 1) {
             tri_wave_len = (0x00 | apu_reg[10]) | ((0x07 & apu_reg[11]) << 8); 
@@ -230,11 +243,16 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
             squa2_duty = (0xC0 & apu_reg[4]) >> 6;
             squa2_vol = 0x0F & apu_reg[4];
             fprintf(fp_apu_squa2_log, "%d_%d:%04X:%d:%d:%d\n", second_cnt, frame_cnt, squa2_wave_len, squa2_wave_len, squa2_vol, squa2_duty);
+            ////NOISE
+            noise_vol = 0x0F & apu_reg[12];
+            noise_len_idx = 0x0F & apu_reg[14];
+            fprintf(fp_apu_noise_log, "%d_%d:%04X:%d:%d\n", second_cnt, frame_cnt, noise_len_idx, noise_len_idx, noise_vol);
             frame_cnt = frame_cnt%60 + 1;
             if(frame_cnt == 1) {
                 second_cnt++;
             }
-        }
+        }*/
+        soundio_flush_events(soundio);
         SleepTime = (long)FramePeriod - ((long)SDL_GetTicks() - FrameStartTime);    
 		if(SleepTime > 0) {
 			SDL_Delay((long)SleepTime*speed); 
@@ -242,10 +260,21 @@ Re: apply_surface(0, 0, backpic, screen);    //from Graph.c   绘制主界面背
 		    SDL_Delay(0);
         }
     }
+    SDL_FreeSurface(screen);
+    SDL_FreeSurface(backpic);
+    SDL_FreeSurface(cartpic);
+    SDL_FreeSurface(gamelist);
+    SDL_FreeSurface(reglist);
+    SDL_FreeSurface(mouse);
+    TTF_CloseFont(font);
+    TTF_CloseFont(font_mid);
+    TTF_CloseFont(font_small);
+    TTF_Quit();
     SDL_Quit();
-    fclose(fp_apu_tri_log);
+    /*fclose(fp_apu_tri_log);
     fclose(fp_apu_squa1_log);
     fclose(fp_apu_squa2_log);
+    fclose(fp_callback_log);*/
     soundio_outstream_destroy(outstream);
     soundio_device_unref(device);
     soundio_destroy(soundio);
@@ -440,7 +469,7 @@ void render_static_elements()
     Draw_Rect(screen,0,0,264,248,c_square);
     gamelist = TTF_RenderUTF8_Solid(font,"马戏团 mapper000 24K",c_fonta);
     apply_surface(300, 10, gamelist, screen);
-    gamelist = TTF_RenderUTF8_Solid(font,"炸弹人 mapper000 24K",c_fonta);
+    gamelist = TTF_RenderUTF8_Solid(font,"绿色兵团 mapper002 128K",c_fonta);
     apply_surface(300, 50, gamelist, screen);
     gamelist = TTF_RenderUTF8_Solid(font,"超级玛丽 mapper000 40K",c_fonta);
     apply_surface(300, 90, gamelist, screen);
